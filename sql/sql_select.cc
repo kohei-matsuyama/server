@@ -8189,7 +8189,7 @@ best_access_path(JOIN      *join,
       if (found_part & 1)
       {
         double rows= record_count * records;
-        double access_cost_factor= MY_MIN(tmp / rows, 1.0);
+        double access_cost_factor= MY_MIN(tmp / records, 1.0);
         filter=
           table->best_range_rowid_filter_for_partial_join(start_key->key, rows,
                                                           access_cost_factor);
