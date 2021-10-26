@@ -3464,6 +3464,7 @@ fts_add_doc_by_id(
 
 	/* Search based on Doc ID. Here, we'll need to consider the case
 	when there is no primary index on Doc ID */
+	// FIXME:
 	tuple = dtuple_create(heap, 1);
 	dfield = dtuple_get_nth_field(tuple, 0);
 	dfield->type.mtype = DATA_INT;
@@ -3688,8 +3689,33 @@ fts_get_max_doc_id(
 		do {
 			rec = btr_pcur_get_rec(&pcur);
 
-			if (page_rec_is_user_rec(rec)) {
+			if (!page_rec_is_user_rec(rec)) {
+				continue;
+			}
+
+			offsets = rec_get_offsets(
+				rec, index, offsets, index->n_core_fields,
+				ULINT_UNDEFINED, &heap);
+
+			if (index->n_uniq == 1) {
 				break;
+			}
+
+			ut_ad(table->versioned());
+			ut_ad(index->n_uniq == 2);
+
+			ulint len;
+			const byte *data = rec_get_nth_field(rec, offsets, 1, &len);
+			if (table->versioned_by_id()) {
+				ut_ad(len == sizeof trx_id_max_bytes);
+				if (0 == memcmp(data, trx_id_max_bytes, len)) {
+					break;
+				}
+			} else {
+				ut_ad(len == sizeof timestamp_max_bytes);
+				if (0 == memcmp(data, timestamp_max_bytes, len)) {
+					break;
+				}
 			}
 		} while (btr_pcur_move_to_prev(&pcur, &mtr));
 
@@ -3698,9 +3724,6 @@ fts_get_max_doc_id(
 		}
 
 		ut_ad(!rec_is_metadata(rec, index));
-		offsets = rec_get_offsets(
-			rec, index, offsets, index->n_core_fields,
-			ULINT_UNDEFINED, &heap);
 
 		data = rec_get_nth_field(rec, offsets, 0, &len);
 
@@ -6365,6 +6388,7 @@ fts_init_index(
 
 		ut_a(index);
 
+		// FIXME:
 		fts_doc_fetch_by_doc_id(NULL, start_doc, index,
 					FTS_FETCH_DOC_BY_ID_LARGE,
 					fts_init_get_doc_id, cache);
