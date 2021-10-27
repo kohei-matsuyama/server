@@ -1531,14 +1531,11 @@ dict_index_t::vers_history_row(
 {
 	ut_ad(!is_primary());
 
-	if (n_uniq)
-	{
-		/* Unique index has its own row_end */
-		ut_ad(is_unique());
-		// FIXME: if index is unique get row_end from it
-	}
+	/*
+	  Get row_end from clustered index
 
-	/* Get row_end from clustered index */
+	  TODO: row_end can be taken from unique secondary index as well.
+	 */
 	bool error = false;
 	mem_heap_t* heap = NULL;
 	dict_index_t* clust_index = NULL;

@@ -6199,18 +6199,20 @@ cleanup:
 /**********************************************************************//**
 Callback function when we initialize the FTS at the start up
 time. It recovers the maximum Doc IDs presented in the current table.
+Tested by innodb_fts.crash_recovery
 @return: always returns TRUE */
 static
 ibool
 fts_init_get_doc_id(
 /*================*/
 	void*	row,			/*!< in: sel_node_t* */
-	void*	user_arg)		/*!< in: fts cache */
+	void*	user_arg)		/*!< in: table with fts */
 {
 	doc_id_t	doc_id = FTS_NULL_DOC_ID;
 	sel_node_t*	node = static_cast<sel_node_t*>(row);
 	que_node_t*	exp = node->select_list;
-	fts_cache_t*    cache = static_cast<fts_cache_t*>(user_arg);
+	dict_table_t*	table = static_cast<dict_table_t *>(user_arg);
+	fts_cache_t*    cache = table->fts->cache;
 
 	ut_ad(ib_vector_is_empty(cache->get_docs));
 
@@ -6221,6 +6223,29 @@ fts_init_get_doc_id(
 		void*           data = dfield_get_data(dfield);
 
 		ut_a(dtype_get_mtype(type) == DATA_INT);
+
+		exp = que_node_get_next(que_node_get_next(exp));
+		if (exp) {
+			ut_ad(table->versioned());
+			dfield = que_node_get_val(exp);
+			type = dfield_get_type(dfield);
+			ut_ad(type->vers_sys_end());
+			data = dfield_get_data(dfield);
+			ulint len = dfield_get_len(dfield);
+			if (table->versioned_by_id()) {
+				ut_ad(len == sizeof trx_id_max_bytes);
+				if (0 != memcmp(data, trx_id_max_bytes, len)) {
+					return true;
+				}
+			} else {
+				ut_ad(len == sizeof timestamp_max_bytes);
+				if (0 != memcmp(data, timestamp_max_bytes, len)) {
+					return true;
+				}
+			}
+			ut_ad(!(exp = que_node_get_next(exp)));
+		}
+		ut_ad(!exp);
 
 		doc_id = static_cast<doc_id_t>(mach_read_from_8(
 			static_cast<const byte*>(data)));
@@ -6388,10 +6413,9 @@ fts_init_index(
 
 		ut_a(index);
 
-		// FIXME:
 		fts_doc_fetch_by_doc_id(NULL, start_doc, index,
 					FTS_FETCH_DOC_BY_ID_LARGE,
-					fts_init_get_doc_id, cache);
+					fts_init_get_doc_id, table);
 	} else {
 		if (table->fts->cache->stopword_info.status
 		    & STOPWORD_NOT_INIT) {
