@@ -3464,8 +3464,8 @@ fts_add_doc_by_id(
 
 	/* Search based on Doc ID. Here, we'll need to consider the case
 	when there is no primary index on Doc ID */
-	// FIXME:
-	tuple = dtuple_create(heap, 1);
+	const ulint n_uniq = table->fts_n_uniq();
+	tuple = dtuple_create(heap, n_uniq);
 	dfield = dtuple_get_nth_field(tuple, 0);
 	dfield->type.mtype = DATA_INT;
 	dfield->type.prtype = DATA_NOT_NULL | DATA_UNSIGNED | DATA_BINARY_TYPE;
@@ -3473,12 +3473,25 @@ fts_add_doc_by_id(
 	mach_write_to_8((byte*) &temp_doc_id, doc_id);
 	dfield_set_data(dfield, &temp_doc_id, sizeof(temp_doc_id));
 
+	if (n_uniq == 2) {
+		ut_ad(table->versioned());
+		ut_ad(fts_id_index->fields[1].col->vers_sys_end());
+		dfield = dtuple_get_nth_field(tuple, 1);
+		dfield->type.mtype = fts_id_index->fields[1].col->mtype;
+		dfield->type.prtype = fts_id_index->fields[1].col->prtype;
+		if (table->versioned_by_id()) {
+			dfield_set_data(dfield, trx_id_max_bytes, sizeof(trx_id_max_bytes));
+		} else {
+			dfield_set_data(dfield, timestamp_max_bytes, sizeof(timestamp_max_bytes));
+		}
+	}
+
 	btr_pcur_open_with_no_init(
 		fts_id_index, tuple, PAGE_CUR_LE, BTR_SEARCH_LEAF,
 		&pcur, 0, &mtr);
 
 	/* If we have a match, add the data to doc structure */
-	if (btr_pcur_get_low_match(&pcur) == 1) {
+	if (btr_pcur_get_low_match(&pcur) == n_uniq) {
 		const rec_t*	rec;
 		btr_pcur_t*	doc_pcur;
 		const rec_t*	clust_rec;
