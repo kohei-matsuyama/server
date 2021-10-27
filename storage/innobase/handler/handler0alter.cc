@@ -2756,6 +2756,9 @@ innobase_fts_check_doc_id_index(
 		/* Check if a unique index with the name of
 		FTS_DOC_ID_INDEX_NAME is being created. */
 
+		const ulint fts_n_uniq= altered_table->versioned() ? 2 : 1;
+		ut_ad(!table || table->fts_n_uniq() == fts_n_uniq);
+
 		for (uint i = 0; i < altered_table->s->keys; i++) {
 			const KEY& key = altered_table->key_info[i];
 
@@ -2765,7 +2768,7 @@ innobase_fts_check_doc_id_index(
 			}
 
 			if ((key.flags & HA_NOSAME)
-			    && key.user_defined_key_parts == table->fts_n_uniq()
+			    && key.user_defined_key_parts == fts_n_uniq
 			    && !strcmp(key.name.str, FTS_DOC_ID_INDEX_NAME)
 			    && !strcmp(key.key_part[0].field->field_name.str,
 				       FTS_DOC_ID_COL_NAME)) {
