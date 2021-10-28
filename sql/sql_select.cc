@@ -7459,6 +7459,7 @@ best_access_path(JOIN      *join,
   Loose_scan_opt loose_scan_opt;
   DBUG_ENTER("best_access_path");
 
+  Json_writer_object the_best_access_path_trace_is_inside_json_array(thd);
   Json_writer_object trace_wrapper(thd, "best_access_path");
   Json_writer_array trace_paths(thd, "considered_access_paths");
 
