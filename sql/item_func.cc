@@ -56,6 +56,8 @@
 #include "sql_base.h"
 #include "sql_cte.h"
 
+#include "my_json_writer.h"
+
 #ifdef NO_EMBEDDED_ACCESS_CHECKS
 #define sp_restore_security_context(A,B) while (0) {}
 #endif
@@ -2137,6 +2139,7 @@ double Item_func_cos::val_real()
 
 double Item_func_sin::val_real()
 {
+  json_validity_test();
   DBUG_ASSERT(fixed == 1);
   double value= args[0]->val_real();
   if ((null_value=args[0]->null_value))

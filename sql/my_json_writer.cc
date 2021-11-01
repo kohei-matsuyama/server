@@ -298,6 +298,50 @@ void Json_writer::add_str(const char *str)
   add_str(str, len);
 }
 
+void test1()
+{
+  Json_writer w;
+  w.start_object();
+  w.add_member("foo"); // just a name, without a value
+  w.end_object();
+  fprintf(stderr, "\n%s\n", ((String*)w.output.get_string())->c_ptr());
+}
+
+void test2()
+{
+  Json_writer w;
+  w.start_object();
+   w.add_ull(123); // unnamed value in an object
+  w.end_object();
+  fprintf(stderr, "\n%s\n", ((String*)w.output.get_string())->c_ptr());
+}
+
+void test3()
+{
+  Json_writer w;
+  w.start_object();
+  w.add_member("bebebe").add_ull(345); // named value in an object. this is actually valid.
+  w.end_object();
+  fprintf(stderr, "\n%s\n", ((String*)w.output.get_string())->c_ptr());
+}
+
+void test4()
+{
+  Json_writer w;
+  w.start_array();
+  w.add_member("bebebe").add_ull(345); // named member in array.
+  w.end_array();
+  fprintf(stderr, "\n%s\n", ((String*)w.output.get_string())->c_ptr());
+}
+
+void json_validity_test()
+{
+  test1();
+  test2();
+  test3();
+  test4();
+}
+
 /*
   This function is used to add only num_bytes of str to the output string
 */

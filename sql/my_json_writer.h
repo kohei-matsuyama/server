@@ -174,6 +174,9 @@ private:
   size_t truncated_len;
 };
 
+
+void json_validity_test();
+
 /*
   A class to write well-formed JSON documents. The documents are also formatted
   for human readability.
